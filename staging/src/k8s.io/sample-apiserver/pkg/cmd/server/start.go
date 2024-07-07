@@ -36,6 +36,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilversion "k8s.io/apiserver/pkg/util/version"
 	"k8s.io/component-base/featuregate"
+	baseversion "k8s.io/component-base/version"
 	"k8s.io/sample-apiserver/pkg/admission/plugin/banflunder"
 	"k8s.io/sample-apiserver/pkg/admission/wardleinitializer"
 	"k8s.io/sample-apiserver/pkg/apis/wardle/v1alpha1"
@@ -122,8 +123,9 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 		},
 	}))
 	utilruntime.Must(utilversion.DefaultComponentGlobalsRegistry.Register(apiserver.WardleComponentName, wardleEffectiveVersion, wardleFeatureGate))
-	_, _ = utilversion.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
-		utilversion.DefaultKubeComponent, utilversion.DefaultKubeEffectiveVersion(), utilfeature.DefaultMutableFeatureGate)
+	kubeVersion := version.MustParse(baseversion.DefaultKubeBinaryVersion).AddMinor(1)
+	_, _ = utilversion.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(utilversion.DefaultKubeComponent,
+		utilversion.NewEffectiveVersion(kubeVersion.String()), utilfeature.DefaultMutableFeatureGate)
 	utilruntime.Must(utilversion.DefaultComponentGlobalsRegistry.SetEmulationVersionMapping(apiserver.WardleComponentName, utilversion.DefaultKubeComponent, wardleEmulationVersionToKubeEmulationVersion))
 	utilversion.DefaultComponentGlobalsRegistry.AddFlags(flags)
 
