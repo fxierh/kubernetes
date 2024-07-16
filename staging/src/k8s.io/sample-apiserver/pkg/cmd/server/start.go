@@ -125,10 +125,14 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 	// - The minimum compatibility version specifies the minimum version that the component remains compatible with.
 	//
 	// Refer to KEP-4330 for more details: https://github.com/kubernetes/enhancements/blob/master/keps/sig-architecture/4330-compatibility-versions
-	wardleEffectiveVersion := utilversion.NewEffectiveVersion("1.2")
+	defaultWardleVersion := "1.1"
+	// Register the "Wardle" component with the global component registry,
+	// associating it with its effective version and feature gate configuration.
+	// Will skip if the component has been registered, like in the integration test.
+	_, wardleFeatureGate := utilversion.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(
+		apiserver.WardleComponentName, utilversion.NewEffectiveVersion(defaultWardleVersion),
+		featuregate.NewVersionedFeatureGate(version.MustParse(defaultWardleVersion)))
 
-	// Initialize a feature gate object for the "Wardle" component
-	wardleFeatureGate := utilfeature.DefaultFeatureGate.CopyKnownFeatures()
 	// Add versioned feature specifications for the "BanFlunder" feature.
 	// These specifications, together with the effective version, determine if the feature is enabled.
 	utilruntime.Must(wardleFeatureGate.AddVersioned(map[featuregate.Feature]featuregate.VersionedSpecs{
@@ -139,16 +143,9 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 		},
 	}))
 
-	// Register the "Wardle" component with the global component registry,
-	// associating it with its effective version and feature gate configuration.
-	utilruntime.Must(utilversion.DefaultComponentGlobalsRegistry.Register(apiserver.WardleComponentName, wardleEffectiveVersion, wardleFeatureGate))
-
 	// Register the default kube component if not already present in the global registry.
-	// It is artificially defined below that Wardle v1.1 maps to the default kube version,
-	// so we use the default kube version plus one minor version to correspond to Wardle v1.2.
-	kubeVersion := version.MustParse(baseversion.DefaultKubeBinaryVersion).AddMinor(1)
 	_, _ = utilversion.DefaultComponentGlobalsRegistry.ComponentGlobalsOrRegister(utilversion.DefaultKubeComponent,
-		utilversion.NewEffectiveVersion(kubeVersion.String()), utilfeature.DefaultMutableFeatureGate)
+		utilversion.NewEffectiveVersion(baseversion.DefaultKubeBinaryVersion), utilfeature.DefaultMutableFeatureGate)
 
 	// Set the emulation version mapping from the "Wardle" component to the kube component.
 	// This ensures that the emulation version of the latter is determined by the emulation version of the former.
@@ -206,7 +203,7 @@ func (o *WardleServerOptions) Config() (*apiserver.Config, error) {
 	serverConfig.OpenAPIV3Config.Info.Title = "Wardle"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
 
-	serverConfig.FeatureGate = utilversion.DefaultComponentGlobalsRegistry.FeatureGateFor(apiserver.WardleComponentName)
+	serverConfig.FeatureGate = utilversion.DefaultComponentGlobalsRegistry.FeatureGateFor(utilversion.DefaultKubeComponent)
 	serverConfig.EffectiveVersion = utilversion.DefaultComponentGlobalsRegistry.EffectiveVersionFor(apiserver.WardleComponentName)
 
 	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
