@@ -65,8 +65,8 @@ func wardleEmulationVersionToKubeEmulationVersion(ver *version.Version) *version
 		return nil
 	}
 	kubeVer := utilversion.DefaultKubeEffectiveVersion().BinaryVersion()
-	// "1.1" maps to kubeVer
-	offset := int(ver.Minor()) - 1
+	// "1.2" maps to kubeVer
+	offset := int(ver.Minor()) - 2
 	return kubeVer.OffsetMinor(offset)
 }
 
@@ -125,7 +125,7 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 	// - The minimum compatibility version specifies the minimum version that the component remains compatible with.
 	//
 	// Refer to KEP-4330 for more details: https://github.com/kubernetes/enhancements/blob/master/keps/sig-architecture/4330-compatibility-versions
-	defaultWardleVersion := "1.1"
+	defaultWardleVersion := "1.2"
 	// Register the "Wardle" component with the global component registry,
 	// associating it with its effective version and feature gate configuration.
 	// Will skip if the component has been registered, like in the integration test.
@@ -137,8 +137,8 @@ func NewCommandStartWardleServer(ctx context.Context, defaults *WardleServerOpti
 	// These specifications, together with the effective version, determine if the feature is enabled.
 	utilruntime.Must(wardleFeatureGate.AddVersioned(map[featuregate.Feature]featuregate.VersionedSpecs{
 		"BanFlunder": {
-			{Version: version.MustParse("1.2"), Default: true, PreRelease: featuregate.GA},
-			{Version: version.MustParse("1.1"), Default: false, PreRelease: featuregate.Beta},
+			{Version: version.MustParse("1.2"), Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+			{Version: version.MustParse("1.1"), Default: true, PreRelease: featuregate.Beta},
 			{Version: version.MustParse("1.0"), Default: false, PreRelease: featuregate.Alpha},
 		},
 	}))
